@@ -440,7 +440,10 @@ socket.on('reconnect_failed', () => {
 ### Full Implementation
 
 Reffer 
-https://github.com/aivocofounders/Connect-S2S-WebSocket/tree/main/Demo
 
 Interact with Websockets Via CLI
 https://github.com/aivocofounders/Connect-S2S-WebSocket/tree/main/Test_S2S_on_CLI
+
+Webapp Playground: https://github.com/aivocofounders/Connect-S2S-WebSocket/tree/main/Demo
+
+
