@@ -4,6 +4,10 @@
 
 Welcome to the Speech-to-Speech WebSocket API! This real-time API enables voice conversations with AI, supporting custom function calls and high-quality audio streaming.
 
+Overview 
+<img width="1306" height="276" alt="image" src="https://github.com/user-attachments/assets/febac3af-87b5-433b-92b7-31aeb27638fb" />
+
+
 ### Base Endpoint
 ```
 wss://sts.aivoco.on.cloud.vispark.in
