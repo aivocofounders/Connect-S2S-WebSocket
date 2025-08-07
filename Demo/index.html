@@ -1,0 +1,2055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Play Studio - Test STS model Rose</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #fafafa;
+            color: #1a1a1a;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            background: white;
+            overflow-y: auto;
+        }
+
+        .sidebar {
+            width: 320px;
+            background: #D6ADFF;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .header {
+            margin-bottom: 2rem;
+        }
+
+        .app-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 0.5rem;
+        }
+
+        .app-subtitle {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            border: 1px solid #f0f0f0;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #4a4a4a;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e5e5e5;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #D6ADFF;
+            box-shadow: 0 0 0 3px rgba(214, 173, 255, 0.1);
+        }
+
+        .form-textarea {
+            min-height: 120px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .form-select {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .radio-input {
+            width: 1.25rem;
+            height: 1.25rem;
+            border: 2px solid #d1d5db;
+            border-radius: 50%;
+            appearance: none;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .radio-input:checked {
+            border-color: #D6ADFF;
+            background: #D6ADFF;
+        }
+
+        .radio-input:checked::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 0.5rem;
+            height: 0.5rem;
+            background: white;
+            border-radius: 50%;
+        }
+
+        .radio-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #4a4a4a;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: #D6ADFF;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #c19bff;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(214, 173, 255, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #4a4a4a;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #e5e7eb;
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #dc2626;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-badge.connected {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-badge.disconnected {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        .function-count {
+            font-size: 0.875rem;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .sidebar-header {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .sidebar-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-subtitle {
+            font-size: 0.875rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .call-status {
+            color: white;
+            font-size: 0.875rem;
+            margin-bottom: 2rem;
+        }
+
+        .call-logs {
+            flex: 1;
+        }
+
+        .call-logs-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 1rem;
+        }
+        .call-logs {
+            background: rgba(0, 0, 0, 1);
+            padding: 1rem;
+            border-radius: 12px;
+            margin-top: 1rem;
+            width: 100%;
+            height: 200px; /* or whatever height fits your layout */
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 0.5rem;
+            font-family: 'Monaco', 'Menlo', monospace;
+        }
+
+
+
+        .audio-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-left: 0.5rem;
+            background: #ef4444;
+            transition: all 0.3s ease;
+        }
+
+        .audio-indicator.active {
+            background: #10b981;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .small-text {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 0.5rem;
+            line-height: 1.4;
+        }
+
+        @media (max-width: 768px) {
+            .app-container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                order: -1;
+            }
+            
+            .main-content {
+                padding: 1rem;
+            }
+        }
+        
+        /* Custom Functions Section */
+        .functions-section {
+            background: #f8f9fa;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .function-item {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1rem;
+            margin: 0.75rem 0;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .function-item:hover {
+            border-color: #D6ADFF;
+            box-shadow: 0 2px 8px rgba(214, 173, 255, 0.1);
+        }
+
+        .function-name {
+            font-weight: 600;
+            color: #1a1a1a;
+            font-size: 0.875rem;
+        }
+
+        .function-description {
+            color: #6b7280;
+            font-size: 0.75rem;
+            margin: 0.5rem 0;
+        }
+
+        .function-params {
+            background: #f9fafb;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-top: 0.75rem;
+            font-size: 0.75rem;
+        }
+
+        .param-item {
+            margin: 0.25rem 0;
+            padding: 0.5rem;
+            background: white;
+            border-radius: 6px;
+            border-left: 3px solid #D6ADFF;
+            font-size: 0.75rem;
+        }
+
+        .function-actions {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+        }
+
+        .function-actions .btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .add-function-form {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .params-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 0.75rem;
+            background: #f9fafb;
+        }
+
+        .param-row {
+            display: grid;
+            grid-template-columns: 1fr 100px 1fr 80px 60px;
+            gap: 0.5rem;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            padding: 0.5rem;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .param-row input, .param-row select {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        /* Status and Logs */
+        .status {
+            margin: 1.5rem 0;
+            padding: 1rem;
+            border-radius: 12px;
+            display: none;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        .status.success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .status.error {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        .status.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+
+        .log-panel {
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            padding: 1.5rem;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.75rem;
+            margin-top: 1.5rem;
+            color: #f9fafb;
+        }
+
+        .log-panel h3 {
+            margin-top: 0;
+            color: #f9fafb;
+            font-family: inherit;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .log-entry {
+            margin-bottom: 0.5rem;
+            word-wrap: break-word;
+        }
+
+        .log-timestamp {
+            color: #9ca3af;
+        }
+
+        .log-info {
+            color: #60a5fa;
+        }
+
+        .log-success {
+            color: #34d399;
+        }
+
+        .log-error {
+            color: #f87171;
+        }
+
+        .log-ai {
+            color: #fbbf24;
+        }
+
+        .log-function {
+            color: #fb923c;
+        }
+
+        /* Transcription Results */
+        .transcription-results {
+            background: #f8f9fa;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            display: none;
+        }
+
+        .transcription-results h3 {
+            margin-top: 0;
+            color: #1a1a1a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        .transcription-content {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-family: inherit;
+            line-height: 1.6;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-size: 0.875rem;
+        }
+
+        .transcription-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.75rem;
+            margin: 1rem 0;
+        }
+
+        .transcription-stat {
+            background: white;
+            padding: 0.75rem;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+        }
+
+        .transcription-stat .value {
+            font-weight: 600;
+            color: #1a1a1a;
+            font-size: 1rem;
+        }
+
+        .transcription-stat .label {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+
+        .file-info {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin: 0.75rem 0;
+            font-size: 0.75rem;
+            color: #0369a1;
+            display: none;
+        }
+
+        .processing-indicator {
+            display: none;
+            text-align: center;
+            padding: 1.5rem;
+            color: #1a1a1a;
+        }
+
+        .processing-indicator .spinner {
+            display: inline-block;
+            width: 1.25rem;
+            height: 1.25rem;
+            border: 2px solid #e5e7eb;
+            border-top: 2px solid #D6ADFF;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Button Groups */
+        .button-group {
+            display: flex;
+            gap: 0.75rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+
+        .button-group .btn {
+            flex: 1;
+            min-width: 120px;
+        }
+
+        /* Additional polish */
+        .card {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .sidebar {
+            animation: slideInRight 0.6s ease-out;
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Hover effects */
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Focus states */
+        .form-input:focus,
+        .form-textarea:focus,
+        .form-select:focus {
+            border-color: #D6ADFF;
+            box-shadow: 0 0 0 4px rgba(214, 173, 255, 0.1);
+        }
+
+        /* Loading states */
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Status badge animations */
+        .status-badge {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        /* Audio indicator improvements */
+        .audio-indicator.active {
+            animation: audioPulse 1.5s infinite;
+        }
+
+        @keyframes audioPulse {
+            0% { 
+                opacity: 1; 
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+            50% { 
+                opacity: 0.7; 
+                transform: scale(1.2);
+                box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+            }
+            100% { 
+                opacity: 1; 
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    
+    <div class="app-container">
+        <div class="main-content">
+            <div class="header">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <h1 class="app-title">Voice Play Studio</h1>
+                    <div class="status-badge connected">
+                        <span>✓</span> Connected
+                    </div>
+                </div>
+                <p class="app-subtitle">Test STS model Rose</p>
+            </div>
+            
+            <!-- Voice Call Controls -->
+            <div class="card">
+                <h3 class="card-title">Voice Call</h3>
+                <div class="button-group">
+                    <button id="startCall" class="btn btn-primary" onclick="startCall()">
+                        Start Call <span class="audio-indicator" id="audioIndicator"></span>
+                    </button>
+                    <button id="stopCall" class="btn btn-danger" onclick="stopCall()" disabled>
+                        Stop Call
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Connect to ROSE Section -->
+            <div class="card">
+                <h3 class="card-title">Connect to ROSE</h3>
+                <div class="form-group">
+                    <label class="form-label" for="authKey">Enter API Key</label>
+                    <input type="password" id="authKey" class="form-input" placeholder="Enter your API key...">
+                </div>
+            </div>
+            <div style="margin-top: 0.5rem;">
+                <button class="btn btn-secondary" onclick="redirectToApiKeyForm()">Don't have API key? Apply</button>
+            </div>
+            
+            <div></div>
+            <!-- System Prompt Section -->
+            <div class="card">
+                <h3 class="card-title">System Prompt</h3>
+                <div class="form-group">
+                    <textarea id="systemMessage" class="form-input form-textarea" placeholder="You are XYZ from XYZ. Your role is to walk like this..."></textarea>
+                </div>
+            </div>
+            
+            <!-- Select Voice Section -->
+            <div class="card">
+                <h3 class="card-title">🎵 Select Voice</h3>
+                <div class="radio-group">
+                    <label class="radio-option">
+                        <input type="radio" name="voiceChoice" value="Girl" class="radio-input">
+                        <span class="radio-label">Female</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="voiceChoice" value="Boy" class="radio-input" checked>
+                        <span class="radio-label">Male</span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Custom Functions Section -->
+            <div class="card">
+                <h3 class="card-title">
+                    Custom Functions
+                    <span class="function-count" id="functionCount">(0 functions)</span>
+                </h3>
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="showAddFunctionForm()">
+                        <span>+</span> Add Function
+                    </button>
+                </div>
+                
+                <!-- Add Function Form -->
+                <div class="add-function-form" id="addFunctionForm">
+                    <h4 style="margin-bottom: 1rem; font-size: 1rem; font-weight: 600;">➕ Add New Function</h4>
+                    <div class="form-group">
+                        <label class="form-label" for="funcName">Function Name:</label>
+                        <input type="text" id="funcName" class="form-input" placeholder="e.g., getWeather, sendEmail, searchDatabase">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="funcDescription">Description:</label>
+                        <textarea id="funcDescription" class="form-input form-textarea" placeholder="Describe what this function does..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Parameters:</label>
+                        <div class="params-list" id="paramsList">
+                            <div class="small-text">Click "Add Parameter" to define function parameters</div>
+                        </div>
+                        <button type="button" class="btn btn-secondary" onclick="addParameter()" style="margin-top: 0.5rem;">
+                            <span>+</span> Add Parameter
+                        </button>
+                    </div>
+                    <div class="button-group">
+                        <button class="btn btn-primary" onclick="saveFunction()">Save Function</button>
+                        <button class="btn btn-secondary" onclick="hideAddFunctionForm()">Cancel</button>
+                    </div>
+                </div>
+                
+                <!-- Functions List -->
+                <div id="functionsList"></div>
+            </div>
+            
+            <!-- Transcription Section -->
+            <div class="card">
+                <h3 class="card-title">Audio Transcription</h3>
+                <div class="small-text" style="margin-bottom: 1rem;">
+                    Upload an audio file to get a formatted conversation transcript. <strong>Free for users</strong> - uses admin units.
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="audioFile">Audio File:</label>
+                    <input type="file" id="audioFile" class="form-input" accept="audio/*" onchange="handleFileSelect(event)">
+                    <div class="small-text">
+                        Supported formats: WAV, MP3, AAC, OGG, FLAC, AIFF (1 second - 30 minutes)
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="mimeType">Audio Format:</label>
+                    <select id="mimeType" class="form-input form-select">
+                        <option value="audio/wav" selected>WAV</option>
+                        <option value="audio/mp3">MP3</option>
+                        <option value="audio/aac">AAC</option>
+                        <option value="audio/ogg">OGG</option>
+                        <option value="audio/flac">FLAC</option>
+                        <option value="audio/aiff">AIFF</option>
+                    </select>
+                </div>
+                
+                <div class="button-group">
+                    <button id="transcribeBtn" class="btn btn-primary" onclick="transcribeAudio()" disabled>
+                        Start Transcription
+                    </button>
+                    <button id="clearTranscription" class="btn btn-danger" onclick="clearTranscription()">
+                        Clear Results
+                    </button>
+                </div>
+            </div>
+        
+            <!-- Status and Logs -->
+            <div class="status" id="status"></div>
+            
+            <!-- File Upload Info -->
+            <div class="file-info" id="fileInfo">
+                <div id="fileDetails"></div>
+            </div>
+            
+            <!-- Processing Indicator -->
+            <div class="processing-indicator" id="processingIndicator">
+                <div class="spinner"></div>
+                Processing transcription...
+            </div>
+            
+            <!-- Transcription Results -->
+            <div class="transcription-results" id="transcriptionResults">
+                <h3>
+                    Transcription Results 
+                    <button onclick="copyTranscription()" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                      Copy
+                    </button>
+                </h3>
+                
+                <div class="transcription-stats">
+                    <div class="transcription-stat">
+                        <div class="value" id="transcriptionDuration">-</div>
+                        <div class="label">Duration</div>
+                    </div>
+                    <div class="transcription-stat">
+                        <div class="value" id="transcriptionTimestamp">-</div>
+                        <div class="label">Processed At</div>
+                    </div>
+                </div>
+                
+                <div class="transcription-content" id="transcriptionText">
+                    Transcription will appear here...
+                </div>
+            </div>
+            
+
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">Call with Rose</div>
+                <div class="sidebar-subtitle">Voice Play Studio</div>
+            </div>
+            
+            <div class="call-status">
+                <div>Ready to start call</div>
+                <div>Click 'Start Call' to begin</div>
+            </div>
+            
+            <div class="call-logs">
+                <div class="call-logs-title">Call Logs:</div>
+                <div class="log-entry">[17:31:29] Connected to server</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // WebSocket connection
+        const socket = io('https://sts.aivoco.on.cloud.vispark.in');
+        // const socket = io('http://localhost:11002');
+        
+        // State variables
+        let isCallActive = false;
+        let currentCredits = 0;
+        let currentCostPerMinute = 1.0;
+        let callStartTime = null;
+        let audioContext = null;
+        let mediaStream = null;
+        let processor = null;
+        let selectedAudioFile = null;
+        let customFunctions = [];
+        let functionCallCount = 0;
+
+        
+        function redirectToApiKeyForm() {
+            window.open("https://tally.so/r/mVOKY6", "_blank");
+        }
+
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            addLog('Page loaded, connecting to server...', 'info');
+            // No functions loaded by default
+            updateFunctionDisplay();
+        });
+        
+        // Utility functions
+        function showStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            if (status) {
+                status.textContent = message;
+                status.className = `status ${type}`;
+                status.style.display = 'block';
+                
+                if (type !== 'error') {
+                    setTimeout(() => {
+                        status.style.display = 'none';
+                    }, 5000);
+                }
+            }
+            // Also add to logs for visibility
+            addLog(message, type);
+        }
+        
+        function addLog(message, type = 'info') {
+            const logContent = document.querySelector('.call-logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const logClass = type === 'ai' ? 'log-ai' : type === 'function' ? 'log-function' : `log-${type}`;
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.innerHTML = `<span class="log-timestamp">[${timestamp}]</span> <span class="${logClass}">${message}</span>`;
+            
+            // Insert at the beginning (after the title) so newest logs appear at the top
+            const titleElement = logContent.querySelector('.call-logs-title');
+            if (titleElement && titleElement.nextSibling) {
+                logContent.insertBefore(logEntry, titleElement.nextSibling);
+            } else {
+                logContent.appendChild(logEntry);
+            }
+            
+            // Keep scroll at top to show newest logs
+            logContent.scrollTop = 0;
+        }
+        
+
+        
+        function updateUsageDisplay(credits, costPerMinute = 1.0) {
+            currentCredits = credits;
+            // Update function count display
+            const functionCount = document.getElementById('functionCount');
+            if (functionCount) {
+                functionCount.textContent = `(${customFunctions.length} functions)`;
+            }
+            
+            // Log credit information
+            if (credits !== null && credits !== undefined) {
+                addLog(`Credits available: ${credits.toFixed(2)}, Cost per minute: ${costPerMinute.toFixed(2)}`, 'info');
+            }
+        }
+        
+        function updateCallDuration() {
+            if (callStartTime && isCallActive) {
+                const duration = (Date.now() - callStartTime) / 1000;
+                const minutes = Math.floor(duration / 60);
+                const seconds = Math.floor(duration % 60);
+                const usedCredits = (duration / 60) * (currentCostPerMinute || 1.0);
+                const remainingCredits = Math.max(0, currentCredits - usedCredits);
+                
+                // Log call duration periodically (every 30 seconds)
+                if (Math.floor(duration) % 30 === 0 && duration > 0) {
+                    addLog(`Call duration: ${minutes}:${seconds.toString().padStart(2, '0')} • Used: ${usedCredits.toFixed(3)} credits • Remaining: ${remainingCredits.toFixed(2)} credits`, 'info');
+                }
+            }
+        }
+        
+        // Custom Functions Management
+        function saveFunctionsToStorage() {
+            try {
+                localStorage.setItem('aivoco_custom_functions', JSON.stringify(customFunctions));
+            } catch (e) {
+                // LocalStorage not available, use in-memory storage
+                console.log('LocalStorage not available, functions will not persist');
+            }
+        }
+        
+        function loadFunctionsFromStorage() {
+            try {
+                const stored = localStorage.getItem('aivoco_custom_functions');
+                if (stored) {
+                    customFunctions = JSON.parse(stored);
+                }
+            } catch (e) {
+                // LocalStorage not available or corrupted
+                customFunctions = [];
+            }
+        }
+        
+        // Function to load functions from storage (for manual use)
+        function loadSavedFunctions() {
+            loadFunctionsFromStorage();
+            updateFunctionDisplay();
+            addLog('Loaded saved functions from storage', 'info');
+        }
+        
+        function updateFunctionDisplay() {
+            const functionsList = document.getElementById('functionsList');
+            const functionCount = document.getElementById('functionCount');
+            
+            functionCount.textContent = `(${customFunctions.length} functions)`;
+            
+            if (customFunctions.length === 0) {
+                functionsList.innerHTML = '<div class="small-text">No custom functions defined. Click "Add Function" to create one.</div>';
+                return;
+            }
+            
+            functionsList.innerHTML = '';
+            customFunctions.forEach((func, index) => {
+                const funcDiv = document.createElement('div');
+                funcDiv.className = 'function-item';
+                
+                let paramsHtml = '';
+                if (func.parameters && func.parameters.length > 0) {
+                    paramsHtml = '<div class="function-params"><strong>Parameters:</strong>';
+                    func.parameters.forEach(param => {
+                        paramsHtml += `<div class="param-item">
+                            <strong>${param.name}</strong> (${param.type})${param.required ? ' *' : ''} - ${param.description || 'No description'}
+                        </div>`;
+                    });
+                    paramsHtml += '</div>';
+                }
+                
+                funcDiv.innerHTML = `
+                    <div class="function-actions">
+                        <button class="btn btn-danger" onclick="deleteFunction(${index})">Delete</button>
+                    </div>
+                    <div class="function-name">${func.name}</div>
+                    <div class="function-description">${func.description}</div>
+                    ${paramsHtml}
+                `;
+                
+                functionsList.appendChild(funcDiv);
+            });
+        }
+        
+        function showAddFunctionForm() {
+            document.getElementById('addFunctionForm').style.display = 'block';
+            clearFunctionForm();
+        }
+        
+        function hideAddFunctionForm() {
+            document.getElementById('addFunctionForm').style.display = 'none';
+            clearFunctionForm();
+        }
+        
+        function clearFunctionForm() {
+            document.getElementById('funcName').value = '';
+            document.getElementById('funcDescription').value = '';
+            document.getElementById('paramsList').innerHTML = '<div class="small-text">Click "Add Parameter" to define function parameters</div>';
+        }
+        
+        function addParameter() {
+            const paramsList = document.getElementById('paramsList');
+            
+            // Remove placeholder text if this is the first parameter
+            if (paramsList.children.length === 1 && paramsList.children[0].className === 'small-text') {
+                paramsList.innerHTML = '';
+            }
+            
+            const paramRow = document.createElement('div');
+            paramRow.className = 'param-row';
+            paramRow.innerHTML = `
+                <input type="text" placeholder="Parameter name" class="param-name">
+                <select class="param-type">
+                    <option value="string">String</option>
+                    <option value="number">Number</option>
+                    <option value="boolean">Boolean</option>
+                </select>
+                <input type="text" placeholder="Description" class="param-desc">
+                <label><input type="checkbox" class="param-required"> Required</label>
+                <button type="button" class="btn btn-danger" onclick="removeParameter(this)">×</button>
+            `;
+            paramsList.appendChild(paramRow);
+        }
+        
+        function removeParameter(button) {
+            const paramRow = button.parentElement;
+            paramRow.remove();
+            
+            // Add placeholder text if no parameters left
+            const paramsList = document.getElementById('paramsList');
+            if (paramsList.children.length === 0) {
+                paramsList.innerHTML = '<div class="small-text">Click "Add Parameter" to define function parameters</div>';
+            }
+        }
+        
+        function saveFunction() {
+            const name = document.getElementById('funcName').value.trim();
+            const description = document.getElementById('funcDescription').value.trim();
+            
+            if (!name) {
+                showStatus('Function name is required', 'error');
+                return;
+            }
+            
+            if (!description) {
+                showStatus('Function description is required', 'error');
+                return;
+            }
+            
+            // Check for duplicate names
+            if (customFunctions.some(f => f.name === name)) {
+                showStatus('Function name already exists', 'error');
+                return;
+            }
+            
+            // Collect parameters
+            const parameters = [];
+            const paramRows = document.querySelectorAll('.param-row');
+            
+            paramRows.forEach(row => {
+                const name = row.querySelector('.param-name').value.trim();
+                const type = row.querySelector('.param-type').value;
+                const description = row.querySelector('.param-desc').value.trim();
+                const required = row.querySelector('.param-required').checked;
+                
+                if (name) {
+                    parameters.push({ name, type, description, required });
+                }
+            });
+            
+            // Create function object
+            const newFunction = {
+                name,
+                description,
+                parameters
+            };
+            
+            customFunctions.push(newFunction);
+            saveFunctionsToStorage();
+            updateFunctionDisplay();
+            hideAddFunctionForm();
+            
+            showStatus(`Function "${name}" added successfully`, 'success');
+            addLog(`Function added: ${name}`, 'info');
+        }
+        
+        function editFunction(index) {
+            // For now, just show the function details
+            const func = customFunctions[index];
+            showStatus(`Edit function: ${func.name} (Edit feature coming soon)`, 'info');
+        }
+        
+        function deleteFunction(index) {
+            const func = customFunctions[index];
+            if (confirm(`Delete function "${func.name}"?`)) {
+                customFunctions.splice(index, 1);
+                saveFunctionsToStorage();
+                updateFunctionDisplay();
+                showStatus(`Function "${func.name}" deleted`, 'success');
+                addLog(`Function deleted: ${func.name}`, 'info');
+            }
+        }
+        
+        function clearAllFunctions() {
+            if (customFunctions.length === 0) {
+                showStatus('No functions to clear', 'info');
+                return;
+            }
+            
+            if (confirm(`Delete all ${customFunctions.length} functions?`)) {
+                customFunctions = [];
+                saveFunctionsToStorage();
+                updateFunctionDisplay();
+                showStatus('All functions cleared', 'success');
+                addLog('All functions cleared', 'info');
+            }
+        }
+        
+        function loadSampleFunctions() {
+            const samples = [
+                {
+                    name: 'getWeather',
+                    description: 'Get current weather information for a specific city',
+                    parameters: [
+                        { name: 'city', type: 'string', description: 'City name', required: true },
+                        { name: 'units', type: 'string', description: 'Temperature units (celsius/fahrenheit)', required: false }
+                    ]
+                },
+                {
+                    name: 'sendEmail',
+                    description: 'Send an email to a specified recipient',
+                    parameters: [
+                        { name: 'to', type: 'string', description: 'Recipient email address', required: true },
+                        { name: 'subject', type: 'string', description: 'Email subject', required: true },
+                        { name: 'message', type: 'string', description: 'Email content', required: true }
+                    ]
+                }
+            ];
+            
+            samples.forEach(sample => {
+                if (!customFunctions.some(f => f.name === sample.name)) {
+                    customFunctions.push(sample);
+                }
+            });
+            
+            saveFunctionsToStorage();
+            updateFunctionDisplay();
+            showStatus(`${samples.length} sample functions loaded`, 'success');
+            addLog('Sample functions loaded', 'info');
+        }
+        
+        function showDeveloperDocs() {
+            const docs = `
+🔧 Custom Function Implementation Guide
+
+1. CONNECT TO WEBSOCKET
+   const socket = io('http://localhost:11002');
+
+2. START CALL WITH FUNCTIONS
+   socket.emit('start_call', {
+       auth_key: 'your_api_key',
+       custom_functions: [
+           {
+               name: 'getWeather',
+               description: 'Get weather for a city',
+               parameters: [
+                   {name: 'city', type: 'string', required: true}
+               ]
+           }
+       ]
+   });
+
+3. LISTEN FOR FUNCTION CALLS
+   socket.on('function_called', function(data) {
+       console.log('Function:', data.function_name);
+       console.log('Arguments:', data.arguments);
+       console.log('Call ID:', data.call_id);
+       
+       // Handle the function call
+       handleCustomFunction(data.function_name, data.arguments, data.call_id);
+   });
+
+4. IMPLEMENT YOUR LOGIC
+   async function handleCustomFunction(functionName, arguments, callId) {
+       try {
+           let result;
+           
+           switch (functionName) {
+               case 'getWeather':
+                   result = await getWeatherFromAPI(arguments.city);
+                   break;
+               case 'sendEmail':
+                   result = await sendEmailViaService(arguments);
+                   break;
+               default:
+                   result = { error: 'Function not implemented' };
+           }
+           
+           // Send result back to the model
+           socket.emit('function_response', {
+               call_id: callId,
+               function_name: functionName,
+               result: result
+           });
+           
+       } catch (error) {
+           socket.emit('function_response', {
+               call_id: callId,
+               function_name: functionName,
+               result: { error: error.message }
+           });
+       }
+   }
+
+5. EXAMPLE: WEATHER API
+   async function getWeatherFromAPI(city) {
+       const response = await fetch(\`https://api.weatherapi.com/v1/current.json?key=YOUR_KEY&q=\${city}\`);
+       const data = await response.json();
+       
+       return {
+           status: "success",
+           data: {
+               city: city,
+               temperature: data.current.temp_c + "°C",
+               condition: data.current.condition.text
+           }
+       };
+   }
+
+6. EXAMPLE: EMAIL SERVICE
+   async function sendEmailViaService(args) {
+       const response = await fetch('https://your-email-service.com/send', {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({
+               to: args.to,
+               subject: args.subject,
+               body: args.message
+           })
+       });
+       
+       const result = await response.json();
+       
+       return {
+           status: "success",
+           message_id: result.id,
+           message: \`Email sent to \${args.to}\`
+       };
+   }
+
+📋 COMPLETE FLOW:
+1. Model calls your function → function_called event
+2. You process the function → your API calls
+3. You send result back → function_response event
+4. Model continues conversation → with your data
+
+💰 BILLING:
+- Function definitions: 0.5 units per 1000 tokens + 0.05 per function
+- Function calls: 0.05 units per call
+            `;
+            
+            alert(docs);
+        }
+        
+        // Function Activity Management
+        // REMOVED: showFunctionActivity, hideFunctionActivity, updateCallCountDisplay, addFunctionCall, updateFunctionCall
+        
+        // Transcription functions (existing code)
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            const transcribeBtn = document.getElementById('transcribeBtn');
+            const fileInfo = document.getElementById('fileInfo');
+            const fileDetails = document.getElementById('fileDetails');
+            const mimeTypeSelect = document.getElementById('mimeType');
+            
+            if (file) {
+                selectedAudioFile = file;
+                
+                // Auto-detect and set mime type
+                const fileType = file.type;
+                if (fileType && fileType.startsWith('audio/')) {
+                    const options = mimeTypeSelect.options;
+                    for (let i = 0; i < options.length; i++) {
+                        if (options[i].value === fileType) {
+                            mimeTypeSelect.value = fileType;
+                            break;
+                        }
+                    }
+                    if (fileType.includes('mp3') || fileType.includes('mpeg')) {
+                        mimeTypeSelect.value = 'audio/mp3';
+                    } else if (fileType.includes('wav')) {
+                        mimeTypeSelect.value = 'audio/wav';
+                    }
+                }
+                
+                // Display file info
+                const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                const estimatedDuration = estimateAudioDuration(file.size, mimeTypeSelect.value);
+                const estimatedCost = (estimatedDuration / 60) * 0.12;
+                
+                fileDetails.innerHTML = `
+                    <strong>📁 ${file.name}</strong><br>
+                    Size: ${fileSizeMB} MB | Est. Duration: ${estimatedDuration.toFixed(1)}s | Est. Cost: ${estimatedCost.toFixed(4)} units
+                `;
+                fileInfo.style.display = 'block';
+                transcribeBtn.disabled = false;
+                
+                addLog(`File selected: ${file.name} (${fileSizeMB} MB)`, 'info');
+            } else {
+                selectedAudioFile = null;
+                fileInfo.style.display = 'none';
+                transcribeBtn.disabled = true;
+            }
+        }
+        
+        function estimateAudioDuration(fileSize, mimeType) {
+            let bytesPerSecond;
+            if (mimeType.includes('mp3')) {
+                bytesPerSecond = 16 * 1024;
+            } else if (mimeType.includes('wav')) {
+                bytesPerSecond = 23 * 1024;
+            } else if (mimeType.includes('aac')) {
+                bytesPerSecond = 12 * 1024;
+            } else if (mimeType.includes('ogg')) {
+                bytesPerSecond = 14 * 1024;
+            } else {
+                bytesPerSecond = 20 * 1024;
+            }
+            return Math.max(1, fileSize / bytesPerSecond);
+        }
+        
+        async function transcribeAudio() {
+            const authKey = document.getElementById('authKey').value;
+            const mimeType = document.getElementById('mimeType').value;
+            
+            if (!authKey.trim()) {
+                showStatus('Please enter your authentication key', 'error');
+                return;
+            }
+            
+            if (!selectedAudioFile) {
+                showStatus('Please select an audio file', 'error');
+                return;
+            }
+            
+            document.getElementById('processingIndicator').style.display = 'block';
+            document.getElementById('transcribeBtn').disabled = true;
+            document.getElementById('transcriptionResults').style.display = 'none';
+            
+            showStatus('Processing transcription...', 'info');
+            addLog('Starting audio transcription...', 'info');
+            
+            try {
+                const base64Audio = await fileToBase64(selectedAudioFile);
+                
+                const response = await fetch('/transcribe', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        auth_key: authKey,
+                        audio_data: base64Audio,
+                        mime_type: mimeType
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    displayTranscriptionResults(result);
+                    showStatus('Transcription completed successfully', 'success');
+                    addLog(`Transcription completed - Free for users`, 'success');
+                } else {
+                    showStatus(`Transcription failed: ${result.error}`, 'error');
+                    addLog(`Transcription error: ${result.error}`, 'error');
+                }
+                
+            } catch (error) {
+                showStatus(`Network error: ${error.message}`, 'error');
+                addLog(`Network error during transcription: ${error.message}`, 'error');
+            } finally {
+                document.getElementById('processingIndicator').style.display = 'none';
+                document.getElementById('transcribeBtn').disabled = false;
+            }
+        }
+        
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => {
+                    const base64 = reader.result.split(',')[1];
+                    resolve(base64);
+                };
+                reader.onerror = error => reject(error);
+            });
+        }
+        
+        function displayTranscriptionResults(result) {
+            const resultsPanel = document.getElementById('transcriptionResults');
+            const transcriptionText = document.getElementById('transcriptionText');
+            const durationEl = document.getElementById('transcriptionDuration');
+            const timestampEl = document.getElementById('transcriptionTimestamp');
+            
+            durationEl.textContent = `${result.duration_seconds}s`;
+            timestampEl.textContent = new Date(result.timestamp).toLocaleTimeString();
+            
+            transcriptionText.textContent = result.transcription;
+            
+            resultsPanel.style.display = 'block';
+            resultsPanel.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function clearTranscription() {
+            document.getElementById('transcriptionResults').style.display = 'none';
+            document.getElementById('fileInfo').style.display = 'none';
+            document.getElementById('audioFile').value = '';
+            selectedAudioFile = null;
+            document.getElementById('transcribeBtn').disabled = true;
+            addLog('Transcription results cleared', 'info');
+        }
+        
+        function copyTranscription() {
+            const transcriptionText = document.getElementById('transcriptionText').textContent;
+            
+            if (transcriptionText && transcriptionText !== 'Transcription will appear here...') {
+                navigator.clipboard.writeText(transcriptionText).then(() => {
+                    showStatus('Transcription copied to clipboard', 'success');
+                    addLog('Transcription copied to clipboard', 'info');
+                }).catch(() => {
+                    const textArea = document.createElement('textarea');
+                    textArea.value = transcriptionText;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    showStatus('Transcription copied to clipboard', 'success');
+                    addLog('Transcription copied to clipboard', 'info');
+                });
+            }
+        }
+        
+        // Audio handling (existing code with modifications)
+        async function initializeAudio() {
+            try {
+                addLog('Requesting microphone access...', 'info');
+                
+                mediaStream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        sampleRate: 16000,
+                        channelCount: 1,
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    } 
+                });
+                
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                    sampleRate: 16000
+                });
+                
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                }
+                
+                const source = audioContext.createMediaStreamSource(mediaStream);
+                processor = audioContext.createScriptProcessor(1024, 1, 1);
+                
+                processor.onaudioprocess = function(e) {
+                    if (isCallActive) {
+                        const inputBuffer = e.inputBuffer;
+                        const inputData = inputBuffer.getChannelData(0);
+                        
+                        let hasSignificantAudio = false;
+                        let maxAmplitude = 0;
+                        for (let i = 0; i < inputData.length; i++) {
+                            const amplitude = Math.abs(inputData[i]);
+                            maxAmplitude = Math.max(maxAmplitude, amplitude);
+                            if (amplitude > 0.001) {
+                                hasSignificantAudio = true;
+                            }
+                        }
+                        
+                        const pcmData = new Int16Array(inputData.length);
+                        for (let i = 0; i < inputData.length; i++) {
+                            pcmData[i] = Math.max(-32768, Math.min(32767, inputData[i] * 32767));
+                        }
+                        
+                        socket.emit('audio_data', {
+                            audio_data: btoa(String.fromCharCode.apply(null, new Uint8Array(pcmData.buffer))),
+                            has_audio: hasSignificantAudio,
+                            max_amplitude: maxAmplitude
+                        });
+                    }
+                };
+                
+                source.connect(processor);
+                processor.connect(audioContext.destination);
+                
+                document.getElementById('audioIndicator').classList.add('active');
+                addLog('Audio initialized successfully', 'success');
+                
+            } catch (error) {
+                addLog(`Audio initialization failed: ${error.message}`, 'error');
+                showStatus('Microphone access is required for voice calls', 'error');
+                throw error;
+            }
+        }
+        
+        // Audio streaming variables
+        let audioQueue = [];
+        let isPlayingStream = false;
+        let nextScheduledTime = 0;
+        let audioContextStartTime = 0;
+        
+        function playAudioResponse(audioData) {
+            if (!audioContext) return;
+            
+            try {
+                const binaryString = atob(audioData);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                    bytes[i] = binaryString.charCodeAt(i);
+                }
+                
+                const pcmData = new Int16Array(bytes.buffer);
+                const floatData = new Float32Array(pcmData.length);
+                for (let i = 0; i < pcmData.length; i++) {
+                    floatData[i] = pcmData[i] / 32768.0;
+                }
+                
+                audioQueue.push(floatData);
+                
+                if (!isPlayingStream) {
+                    startAudioStream();
+                }
+                
+            } catch (error) {
+                addLog(`Audio playback error: ${error.message}`, 'error');
+            }
+        }
+        
+        function startAudioStream() {
+            if (audioQueue.length === 0) {
+                isPlayingStream = false;
+                return;
+            }
+            
+            isPlayingStream = true;
+            
+            if (audioContextStartTime === 0) {
+                audioContextStartTime = audioContext.currentTime;
+                nextScheduledTime = audioContextStartTime;
+            }
+            
+            processAudioQueue();
+        }
+        
+        function processAudioQueue() {
+            while (audioQueue.length > 0 && isPlayingStream) {
+                const floatData = audioQueue.shift();
+                
+                const audioBuffer = audioContext.createBuffer(1, floatData.length, 24000);
+                audioBuffer.getChannelData(0).set(floatData);
+                
+                const source = audioContext.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(audioContext.destination);
+                
+                const bufferDuration = floatData.length / 24000;
+                const scheduledTime = Math.max(nextScheduledTime, audioContext.currentTime);
+                
+                source.start(scheduledTime);
+                nextScheduledTime = scheduledTime + bufferDuration;
+                
+                source.onended = () => {
+                    if (audioQueue.length > 0 && isPlayingStream) {
+                        setTimeout(() => processAudioQueue(), 1);
+                    } else if (audioQueue.length === 0) {
+                        isPlayingStream = false;
+                    }
+                };
+                
+                break;
+            }
+        }
+        
+        function stopAudioStream() {
+            audioQueue = [];
+            isPlayingStream = false;
+            nextScheduledTime = 0;
+            audioContextStartTime = 0;
+        }
+        
+        function stopAudio() {
+            stopAudioStream();
+            
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream = null;
+            }
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+            if (processor) {
+                processor.disconnect();
+                processor = null;
+            }
+            document.getElementById('audioIndicator').classList.remove('active');
+            addLog('Audio stopped', 'info');
+        }
+        
+        // Call management (enhanced with function support)
+        async function startCall() {
+            const authKey = document.getElementById('authKey').value;
+            const systemMessage = document.getElementById('systemMessage').value;
+            const voiceChoice = document.querySelector('input[name="voiceChoice"]:checked').value;
+
+            if (!authKey.trim()) {
+                showStatus('Please enter your authentication key', 'error');
+                return;
+            }
+
+            showStatus('Starting voice call...', 'info');
+            addLog('Attempting to start call...', 'info');
+
+            try {
+                await initializeAudio();
+                
+                // Show function activity panel if functions are loaded
+                if (customFunctions.length > 0) {
+                    // REMOVED: Show function activity panel
+                    // Clear previous function calls
+                    // document.getElementById('functionCallsList').innerHTML = '<div class="small-text">Function calls will appear here during voice calls...</div>';
+                    // functionCallCount = 0;
+                    // updateCallCountDisplay();
+                }
+                
+                // Send custom functions with the call start request
+                socket.emit('start_call', {
+                    auth_key: authKey,
+                    system_message: systemMessage,
+                    voice_choice: voiceChoice,
+                    custom_functions: customFunctions  // NEW: Send custom functions
+                });
+                
+                addLog(`Starting call with ${customFunctions.length} custom functions`, 'info');
+            } catch (error) {
+                showStatus('Failed to initialize audio', 'error');
+                addLog('Call start failed due to audio initialization', 'error');
+            }
+        }
+
+        function stopCall() {
+            showStatus('Stopping voice call...', 'info');
+            addLog('🛑 Stop button clicked - stopping call...', 'info');
+            socket.emit('stop_call');
+            stopAudioStream();
+            stopAudio();
+            
+            // Hide function activity panel
+            // REMOVED: Hide function activity panel
+        }
+        
+        // Socket event listeners (enhanced with function support)
+        socket.on('connect', function() {
+            addLog('Connected to server', 'success');
+        });
+
+        socket.on('disconnect', function() {
+            addLog('Disconnected from server', 'error');
+            isCallActive = false;
+            document.getElementById('startCall').disabled = false;
+            document.getElementById('stopCall').disabled = true;
+            stopAudioStream();
+            stopAudio();
+        });
+
+        socket.on('auth_success', function(data) {
+            showStatus('Authentication successful', 'success');
+            addLog('Authentication successful', 'success');
+            updateUsageDisplay(data.credits);
+        });
+
+        socket.on('auth_failed', function(data) {
+            showStatus(data.message, 'error');
+            addLog(`Authentication failed: ${data.message}`, 'error');
+            updateUsageDisplay(data.credits);
+        });
+
+        socket.on('session_ready', function(data) {
+            showStatus('Voice session started', 'success');
+            addLog(`Session ready - ${data.message}`, 'success');
+            
+            if (data.functions_loaded !== undefined) {
+                addLog(`${data.functions_loaded} custom functions loaded in session`, 'function');
+            }
+            
+            isCallActive = true;
+            callStartTime = Date.now();
+            currentCostPerMinute = data.cost_per_minute || 1.0;
+            updateUsageDisplay(data.credits_available, data.cost_per_minute);
+            
+            document.getElementById('startCall').disabled = true;
+            document.getElementById('stopCall').disabled = false;
+            
+            // Start call duration timer
+            setInterval(updateCallDuration, 1000);
+            // REMOVED: Show function activity panel
+        });
+
+        socket.on('session_ended', function(data) {
+            let statusMessage = 'Voice session ended';
+            let logMessage = '✅ Voice session ended';
+            
+            if (data.reason === 'insufficient_user_credits') {
+                statusMessage += ' (Your credits are over)';
+                logMessage = '💰 Session ended - insufficient user credits';
+            } else if (data.reason === 'insufficient_admin_units') {
+                statusMessage += ' (Admin units issue)';
+                logMessage = '💰 Session ended - insufficient admin units';
+            } else if (data.message && data.message.includes('stopped by user')) {
+                statusMessage = 'Call stopped successfully';
+                logMessage = '🛑 Call stopped by user';
+            }
+            
+            showStatus(statusMessage, 'info');
+            addLog(logMessage, 'info');
+            
+            if (data.total_credits_used !== undefined) {
+                addLog(`💰 Total credits used: ${data.total_credits_used.toFixed(4)}`, 'info');
+                if (data.remaining_credits !== undefined) {
+                    addLog(`💰 Remaining credits: ${data.remaining_credits.toFixed(2)}`, 'info');
+                    updateUsageDisplay(data.remaining_credits);
+                }
+            }
+            
+            isCallActive = false;
+            callStartTime = null;
+            document.getElementById('startCall').disabled = false;
+            document.getElementById('stopCall').disabled = true;
+            stopAudioStream();
+            stopAudio();
+            // REMOVED: Hide function activity panel
+        });
+
+        socket.on('text_response', function(data) {
+            addLog(`AI: ${data.text}`, 'ai');
+        });
+
+        // NEW: Function call event handlers
+        socket.on('function_called', function(data) {
+            addLog(`🔧 Function called: ${data.function_name}`, 'function');
+            addLog(`📝 Arguments: ${JSON.stringify(data.arguments)}`, 'function');
+            
+            // Console logging for function calls
+            console.log('🔧 MODEL FUNCTION CALL:', {
+                function: data.function_name,
+                arguments: data.arguments,
+                call_id: data.call_id,
+                timestamp: new Date().toISOString()
+            });
+            
+            // Call the developer's custom function handler
+            handleCustomFunction(data.function_name, data.arguments, data.call_id);
+        });
+
+        socket.on('function_result', function(data) {
+            addLog(`✅ Function result: ${data.function_name}`, 'function');
+            addLog(`📊 Result: ${JSON.stringify(data.result)}`, 'function');
+            
+            // Console logging for function results
+            console.log('✅ FUNCTION RESULT:', {
+                function: data.function_name,
+                result: data.result,
+                timestamp: new Date().toISOString()
+            });
+        });
+
+        socket.on('function_error', function(data) {
+            addLog(`❌ Function error: ${data.error}`, 'error');
+        });
+
+        socket.on('function_response_sent', function(data) {
+            addLog(`📤 Function response sent: ${data.function_name}`, 'function');
+            addLog(`💰 Admin units deducted: ${data.admin_units_deducted.toFixed(4)}`, 'function');
+            addLog(`💰 Remaining admin units: ${data.remaining_admin_units.toFixed(2)}`, 'function');
+            
+            // Console logging for function response sent
+            console.log('📤 FUNCTION RESPONSE SENT:', {
+                function: data.function_name,
+                timestamp: new Date().toISOString()
+            });
+            
+            // Note: Admin units are not shown to users, so we don't update the display
+        });
+
+        // NEW: Custom function handler for developers
+        async function handleCustomFunction(functionName, arguments, callId) {
+            try {
+                let result;
+                
+                // Developers can implement their custom function logic here
+                switch (functionName) {
+                    case 'getWeather':
+                        result = await handleGetWeather(arguments);
+                        break;
+                    case 'sendEmail':
+                        result = await handleSendEmail(arguments);
+                        break;
+                    case 'scheduleAppointment':
+                        result = await handleScheduleAppointment(arguments);
+                        break;
+                    default:
+                        result = {
+                            error: `Function '${functionName}' not implemented`,
+                            message: 'This function is not yet implemented by the developer'
+                        };
+                }
+                
+                // Send the result back to the server
+                socket.emit('function_response', {
+                    call_id: callId,
+                    function_name: functionName,
+                    result: result
+                });
+                
+                addLog(`📤 Sent response for ${functionName}`, 'function');
+                
+            } catch (error) {
+                addLog(`❌ Error handling function ${functionName}: ${error.message}`, 'error');
+                
+                // Send error response back to server
+                socket.emit('function_response', {
+                    call_id: callId,
+                    function_name: functionName,
+                    result: {
+                        error: error.message,
+                        status: 'failed'
+                    }
+                });
+            }
+        }
+
+        // Example function implementations for developers
+        async function handleGetWeather(args) {
+            const city = args.city;
+            addLog(`🌤️ Getting weather for ${city}...`, 'function');
+            
+            // Simulate API call (replace with actual weather API)
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Mock weather data (replace with real API call)
+            const weatherData = {
+                city: city,
+                temperature: "22°C",
+                condition: "Partly cloudy",
+                humidity: "65%",
+                wind_speed: "12 km/h"
+            };
+            
+            return {
+                status: "success",
+                data: weatherData,
+                message: `Weather retrieved for ${city}`
+            };
+        }
+
+        async function handleSendEmail(args) {
+            const { to, subject, message } = args;
+            addLog(`📧 Sending email to ${to}...`, 'function');
+            
+            // Simulate email sending (replace with actual email service)
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            return {
+                status: "success",
+                message_id: "email_" + Date.now(),
+                message: `Email sent successfully to ${to}`,
+                subject: subject
+            };
+        }
+
+        async function handleScheduleAppointment(args) {
+            const { date, time, duration, description } = args;
+            addLog(`📅 Scheduling appointment for ${date} at ${time}...`, 'function');
+            
+            // Simulate appointment scheduling (replace with actual calendar API)
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            return {
+                status: "success",
+                appointment_id: "apt_" + Date.now(),
+                message: `Appointment scheduled for ${date} at ${time}`,
+                details: {
+                    date: date,
+                    time: time,
+                    duration: duration || 60,
+                    description: description || "General appointment"
+                }
+            };
+        }
+
+        // Audio response handling
+        let lastAudioSent = 0;
+        let originalEmit = socket.emit;
+        socket.emit = function(event, data) {
+            if (event === 'audio_data') {
+                lastAudioSent = Date.now();
+            }
+            return originalEmit.call(this, event, data);
+        };
+        
+        socket.on('audio_response', function(data) {
+            if (lastAudioSent > 0) {
+                const responseTime = Date.now() - lastAudioSent;
+                if (responseTime > 1000) {
+                    addLog(`Audio response time: ${responseTime}ms`, 'info');
+                }
+            }
+            playAudioResponse(data.audio_data);
+        });
+
+        socket.on('error', function(data) {
+            showStatus(`Error: ${data.message}`, 'error');
+            addLog(`Error: ${data.message}`, 'error');
+            isCallActive = false;
+            document.getElementById('startCall').disabled = false;
+            document.getElementById('stopCall').disabled = true;
+            stopAudioStream();
+            stopAudio();
+            // REMOVED: Hide function activity panel
+        });
+    </script>
+</body>
+</html>
