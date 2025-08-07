@@ -219,7 +219,7 @@ function handleSipAudio(sipAudioStream) {
     });
 }
 ```
-```
+
 
 ## 🎯 Session Management
 
@@ -337,7 +337,7 @@ function playOnMobileDevice(floatData) {
     nativeAudioPlayer.playPCMData(floatData);
 }
 ```
-```
+
 
 ## 📝 Text Response Logging
 
@@ -395,250 +395,6 @@ function stopAudio() {
 }
 ```
 
-## 🔧 Complete Example
-
-### Full Implementation
-
-```html
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Speech-to-Speech API Demo</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
-</head>
-<body>
-    <div>
-        <input type="text" id="apiKey" placeholder="Enter your API key">
-        <button id="startCall">Start Call</button>
-        <button id="stopCall" disabled>Stop Call</button>
-        <div id="status"></div>
-        <div id="conversation-log"></div>
-    </div>
-
-    <script>
-        const socket = io('wss://sts.aivoco.on.cloud.vispark.in');
-        let isCallActive = false;
-        let audioContext = null;
-        let mediaStream = null;
-        let processor = null;
-        let audioQueue = [];
-        let isPlayingStream = false;
-
-        // Connection events
-        socket.on('connect', () => {
-            document.getElementById('status').textContent = 'Connected to server';
-        });
-
-        socket.on('disconnect', () => {
-            document.getElementById('status').textContent = 'Disconnected from server';
-            stopAudio();
-        });
-
-        // Authentication events
-        socket.on('auth_success', (data) => {
-            document.getElementById('status').textContent = `Authenticated. Credits: ${data.credits}`;
-        });
-
-        socket.on('auth_failed', (data) => {
-            document.getElementById('status').textContent = `Auth failed: ${data.message}`;
-        });
-
-        // Session events
-        socket.on('session_ready', (data) => {
-            document.getElementById('status').textContent = 'Voice session active';
-            isCallActive = true;
-            document.getElementById('startCall').disabled = true;
-            document.getElementById('stopCall').disabled = false;
-        });
-
-        socket.on('session_ended', (data) => {
-            document.getElementById('status').textContent = 'Session ended';
-            isCallActive = false;
-            document.getElementById('startCall').disabled = false;
-            document.getElementById('stopCall').disabled = true;
-            stopAudio();
-        });
-
-        // Audio and text responses
-        socket.on('audio_response', (data) => {
-            playAudioResponse(data.audio_data);
-        });
-
-        socket.on('text_response', (data) => {
-            const log = document.getElementById('conversation-log');
-            log.innerHTML += `<div>AI: ${data.text}</div>`;
-        });
-
-        // Start call function
-        document.getElementById('startCall').addEventListener('click', async () => {
-            const apiKey = document.getElementById('apiKey').value;
-            if (!apiKey) {
-                alert('Please enter your API key');
-                return;
-            }
-
-            if (await initializeAudio()) {
-                setupAudioProcessing();
-                
-                socket.emit('start_call', {
-                    auth_key: apiKey,
-                    system_message: 'You are a helpful AI assistant.',
-                    voice_choice: 'female',
-                    custom_functions: []
-                });
-            }
-        });
-
-        // Stop call function
-        document.getElementById('stopCall').addEventListener('click', () => {
-            socket.emit('stop_call');
-            stopAudio();
-        });
-
-        // Audio initialization function
-        async function initializeAudio() {
-            try {
-                mediaStream = await navigator.mediaDevices.getUserMedia({
-                    audio: {
-                        sampleRate: 16000,
-                        channelCount: 1,
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true
-                    }
-                });
-
-                audioContext = new (window.AudioContext || window.webkitAudioContext)({
-                    sampleRate: 16000
-                });
-
-                if (audioContext.state === 'suspended') {
-                    await audioContext.resume();
-                }
-
-                return true;
-            } catch (error) {
-                console.error('Audio initialization failed:', error);
-                alert('Microphone access is required');
-                return false;
-            }
-        }
-
-        // Audio processing setup
-        function setupAudioProcessing() {
-            const source = audioContext.createMediaStreamSource(mediaStream);
-            processor = audioContext.createScriptProcessor(1024, 1, 1);
-
-            processor.onaudioprocess = function(event) {
-                if (isCallActive) {
-                    const inputBuffer = event.inputBuffer;
-                    const inputData = inputBuffer.getChannelData(0);
-                    
-                    let hasSignificantAudio = false;
-                    let maxAmplitude = 0;
-                    
-                    for (let i = 0; i < inputData.length; i++) {
-                        const amplitude = Math.abs(inputData[i]);
-                        maxAmplitude = Math.max(maxAmplitude, amplitude);
-                        if (amplitude > 0.001) {
-                            hasSignificantAudio = true;
-                        }
-                    }
-                    
-                    const pcmData = new Int16Array(inputData.length);
-                    for (let i = 0; i < inputData.length; i++) {
-                        pcmData[i] = Math.max(-32768, Math.min(32767, inputData[i] * 32767));
-                    }
-                    
-                    socket.emit('audio_data', {
-                        audio_data: btoa(String.fromCharCode.apply(null, new Uint8Array(pcmData.buffer))),
-                        has_audio: hasSignificantAudio,
-                        max_amplitude: maxAmplitude
-                    });
-                }
-            };
-
-            source.connect(processor);
-            processor.connect(audioContext.destination);
-        }
-
-        // Audio playback function
-        function playAudioResponse(audioData) {
-            if (!audioContext) return;
-            
-            try {
-                const binaryString = atob(audioData);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
-                }
-                
-                const pcmData = new Int16Array(bytes.buffer);
-                const floatData = new Float32Array(pcmData.length);
-                for (let i = 0; i < pcmData.length; i++) {
-                    floatData[i] = pcmData[i] / 32768.0;
-                }
-                
-                audioQueue.push(floatData);
-                
-                if (!isPlayingStream) {
-                    startAudioPlayback();
-                }
-            } catch (error) {
-                console.error('Audio playback error:', error);
-            }
-        }
-
-        function startAudioPlayback() {
-            if (audioQueue.length === 0) {
-                isPlayingStream = false;
-                return;
-            }
-            
-            isPlayingStream = true;
-            
-            const floatData = audioQueue.shift();
-            const audioBuffer = audioContext.createBuffer(1, floatData.length, 24000);
-            audioBuffer.getChannelData(0).set(floatData);
-            
-            const source = audioContext.createBufferSource();
-            source.buffer = audioBuffer;
-            source.connect(audioContext.destination);
-            source.start();
-            
-            source.onended = () => {
-                if (audioQueue.length > 0) {
-                    startAudioPlayback();
-                } else {
-                    isPlayingStream = false;
-                }
-            };
-        }
-
-        // Stop audio function
-        function stopAudio() {
-            audioQueue = [];
-            isPlayingStream = false;
-            
-            if (mediaStream) {
-                mediaStream.getTracks().forEach(track => track.stop());
-                mediaStream = null;
-            }
-            
-            if (audioContext) {
-                audioContext.close();
-                audioContext = null;
-            }
-            
-            if (processor) {
-                processor.disconnect();
-                processor = null;
-            }
-        }
-    </script>
-</body>
-</html>
-```
 
 ## 🚨 Error Handling
 
@@ -679,13 +435,12 @@ socket.on('reconnect_failed', () => {
 });
 ```
 
-## 🎯 Next Steps
+## 🔧 Complete Example
 
-Now that you have the basic connection established, you can:
+### Full Implementation
 
-1. **Add Custom Functions** - Integrate with external APIs
-2. **Implement Audio Transcription** - Get text from speech
-3. **Add Error Recovery** - Handle network interruptions
-4. **Optimize Performance** - Reduce latency and improve quality
+Reffer 
+https://github.com/aivocofounders/Connect-S2S-WebSocket/tree/main/Demo
 
-This completes the basic connection setup for the Speech-to-Speech WebSocket API!
+Interact with Websockets Via CLI
+https://github.com/aivocofounders/Connect-S2S-WebSocket/tree/main/Test_S2S_on_CLI
